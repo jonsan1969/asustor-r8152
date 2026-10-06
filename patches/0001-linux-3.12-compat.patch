@@ -19,7 +19,7 @@ The rtl_gso_check guard placement matches the later Realtek v2.14.0 source.
 diff --git a/compatibility.h b/compatibility.h
 --- a/compatibility.h
 +++ b/compatibility.h
-@@ -49,6 +49,10 @@
+@@ -49,5 +49,9 @@
  #if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)
  	#define ether_addr_copy(dst, src)		memcpy(dst, src, ETH_ALEN)
 +	/*
