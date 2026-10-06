@@ -27,7 +27,7 @@ The stock system currently has no usable Realtek USB Ethernet driver:
 
 ASUSTOR's `modinfo` is minimal and the shipped modules are heavily stripped. `igb.ko` and `ixgbe.ko` expose no useful modinfo/vermagic strings through the tools present on the NAS.
 
-No `__crc_*` or `__crc_module_layout` entries were visible in `/proc/kallsyms`, and no `__versions` section was found in the sampled vendor modules. The working assumption is therefore `CONFIG_MODVERSIONS=n`, but the real proof will be a successful external-module load.
+No `__crc_*` or `__crc_module_layout` entries were visible in `/proc/kallsyms`, and no `__versions` section was found in the sampled stripped vendor modules. That observation was not sufficient to determine the kernel setting: ASUSTOR's published x86_64 3.12.20 config confirms `CONFIG_MODVERSIONS=y`. The build therefore performs a full kernel build to generate `Module.symvers` before building the external driver.
 
 ## Chosen driver baseline
 
@@ -46,9 +46,10 @@ Why this version:
 - [x] Confirm stock AS-608T has no usable r8152 support
 - [x] Select a conservative driver baseline
 - [x] Vendor and lock the selected GPL driver source
-- [ ] Prepare the ASUSTOR 3.12.20 kernel tree
-- [ ] Build `r8152.ko`
-- [ ] Check module vermagic/ELF architecture
+- [x] Prepare the ASUSTOR 3.12.20 kernel tree
+- [x] Build full kernel tree and generate `Module.symvers` (9147 symbols)
+- [x] Build patched `r8152.ko`
+- [x] Check module vermagic/ELF architecture
 - [ ] Test `insmod` with no USB NIC attached
 - [ ] Buy/attach RTL8156BG adapter
 - [ ] Verify USB ID and driver binding
@@ -56,3 +57,23 @@ Why this version:
 - [ ] iperf3 test
 - [ ] SMB throughput test
 - [ ] Persistent load/APKG packaging
+
+
+## First successful module build
+
+GitHub Actions experimental-build #8 completed successfully on 2026-10-06.
+
+Key results:
+
+- full ASUSTOR Linux 3.12.20 build completed
+- `Module.symvers`: 9147 exported symbols
+- Realtek r8152 v2.13.0 built successfully with the Linux 3.12 compatibility patch
+- module format: ELF64 x86-64 relocatable
+- `__versions` section present
+- `vermagic=3.12.20 SMP mod_unload modversions `
+- native RTL8156 aliases present for `0bda:8156`
+- RTL8156/RTL8156B implementation symbols are present
+- module SHA-256: `06c4c4ae58c0a72cdcd381ff1533be4e3c12cceca44839fdae69db1bb6b65034`
+- CI artifact: `as608t-r8152-test`
+
+The next gate is a controlled load/unload test on the AS-608T with no USB NIC attached. A successful `insmod` without unknown-symbol or module-format errors will be the first direct ABI test against the 2022 ADM kernel.
