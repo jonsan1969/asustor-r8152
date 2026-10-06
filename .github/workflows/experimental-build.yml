@@ -59,7 +59,7 @@ jobs:
       - name: Build kernel symbol versions
         env:
           CROSS_COMPILE: ${{ steps.compiler.outputs.prefix }}
-        run: ./scripts/build-kernel-symvers.sh
+        run: sh ./scripts/build-kernel-symvers.sh
 
       - name: Build r8152
         env:
