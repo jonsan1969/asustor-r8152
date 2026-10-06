@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "src/**"
+      - "patches/**"
       - "scripts/**"
       - "sources.lock"
       - ".github/workflows/experimental-build.yml"
@@ -12,7 +13,7 @@ on:
 jobs:
   build-r8152:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +21,7 @@ jobs:
       - name: Install host build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison flex file libelf-dev
+          sudo apt-get install -y bc bison flex file libelf-dev patch
 
       - name: Fetch ASUSTOR kernel source and config
         run: ./scripts/fetch-asustor-kernel.sh
@@ -51,8 +52,14 @@ jobs:
 
       - name: Inspect target kernel config
         run: |
-          grep -E '^(CONFIG_64BIT|CONFIG_X86_64|CONFIG_SMP|CONFIG_MODULES|CONFIG_MODULE_UNLOAD|CONFIG_MODVERSIONS|CONFIG_LOCALVERSION)='             work/kernel-3.12.20/.config || true
+          grep -E '^(CONFIG_64BIT|CONFIG_X86_64|CONFIG_SMP|CONFIG_MODULES|CONFIG_MODULE_UNLOAD|CONFIG_MODVERSIONS|CONFIG_LOCALVERSION)=' \
+            work/kernel-3.12.20/.config || true
           make -s -C work/kernel-3.12.20 ARCH=x86 kernelrelease
+
+      - name: Build kernel symbol versions
+        env:
+          CROSS_COMPILE: ${{ steps.compiler.outputs.prefix }}
+        run: ./scripts/build-kernel-symvers.sh
 
       - name: Build r8152
         env:
@@ -63,6 +70,8 @@ jobs:
         run: |
           file dist/r8152.ko
           readelf -h dist/r8152.ko
+          echo "--- relevant sections ---"
+          readelf -S dist/r8152.ko | grep -E '__versions|modinfo|symtab|strtab' || true
           echo "--- modinfo strings ---"
           strings dist/r8152.ko | grep -E 'vermagic=|version=|v2\.13\.0|0bda|8156' || true
           echo "--- unresolved symbols ---"
