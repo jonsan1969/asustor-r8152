@@ -19,7 +19,9 @@ if lsmod 2>/dev/null | grep -q '^r8152 '; then
 fi
 
 echo "Loading $MODULE"
-if ! insmod "$MODULE"; then
+if insmod "$MODULE"; then
+    :
+else
     rc=$?
     echo "insmod failed (rc=$rc). Recent dmesg:" >&2
     dmesg | tail -n 80 >&2
