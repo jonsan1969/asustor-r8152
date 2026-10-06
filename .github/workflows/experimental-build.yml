@@ -26,7 +26,7 @@ jobs:
         run: ./scripts/fetch-asustor-kernel.sh
 
       - name: Fetch ASUSTOR x86_64 toolchain
-        run: ./scripts/fetch-toolchain.sh
+        run: sh ./scripts/fetch-toolchain.sh
 
       - name: Locate cross compiler
         id: compiler
