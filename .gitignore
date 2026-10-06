@@ -1,0 +1,21 @@
+# Build/download workspace
+work/
+dist/
+build/
+kernel/
+toolchain/
+
+# Kernel module build products
+*.ko
+*.o
+*.mod
+*.mod.c
+*.mod.o
+*.cmd
+Module.symvers
+modules.order
+.tmp_versions/
+
+# Editor/OS noise
+*~
+.DS_Store

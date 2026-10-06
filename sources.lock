@@ -1,0 +1,22 @@
+driver:
+  project: bb-qq/r8152
+  tag: 2.13.0-1
+  commit: 1d4e43bacbb8646262c0e66ce227dc8fe725de6b
+  version: "v2.13.0 (2020/04/20)"
+  blobs:
+    r8152.c: 3df978f92ea6219aafb39daa8caada4e9d5c500f
+    compatibility.h: cf6353043818f62ad70feb20b8e3039c350a5a12
+    Makefile: 3971b7d7249ddba405e390156b9ef4b6b829056e
+
+asustor_kernel:
+  version: 3.12.20
+  source_file: GPL_linux-3.12.20_20150924.tar.bz2
+  config_file: linux-3.12.20-x86_64.config
+  sourceforge_directory: "ADM 2.3/GPL Source/GPL_2.5.2RCG2"
+
+target:
+  model: AS-608T
+  arch: x86_64
+  adm: 3.5.9
+  kernel_build_date: "2022-08-22"
+  compiler: "gcc 4.6.4 / crosstool-NG 1.22.0 / ASUSTOR x86_64 64-bit toolchain"

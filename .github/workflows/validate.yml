@@ -1,0 +1,29 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  source-and-script-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate shell syntax
+        run: |
+          for f in scripts/*.sh; do
+            bash -n "$f"
+          done
+
+      - name: Verify locked driver version
+        run: |
+          grep -F '#define DRIVER_VERSION "v2.13.0 (2020/04/20)"' src/r8152-2.13.0/r8152.c
+
+      - name: Verify RTL8156 USB ID is present
+        run: |
+          grep -F 'REALTEK_USB_DEVICE(VENDOR_ID_REALTEK, 0x8156)' src/r8152-2.13.0/r8152.c
+
+      - name: Verify compatibility layer reaches kernel 3.12 era
+        run: |
+          grep -F 'KERNEL_VERSION(3,12,0)' src/r8152-2.13.0/compatibility.h
