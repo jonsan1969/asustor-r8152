@@ -24,18 +24,30 @@ fi
 
 cp "$CONFIG" "$KDIR/.config"
 
-# Linux uses ARCH=x86 for both i386 and x86_64 builds.
-MAKE_ARGS="ARCH=x86"
-if [ -n "${CROSS_COMPILE:-}" ]; then
-    MAKE_ARGS="$MAKE_ARGS CROSS_COMPILE=$CROSS_COMPILE"
-fi
-if [ -n "${CC:-}" ]; then
-    MAKE_ARGS="$MAKE_ARGS CC=$CC"
-fi
+# Linux 3.12 predates GCC 10's switch to -fno-common.  Modern GitHub
+# runners build the host-side x86 relocs helper with a current GCC, where
+# the old source otherwise fails with duplicate per_cpu_load_addr symbols.
+# Keep the target compiler untouched; this flag is only for host utilities.
+HOSTCFLAGS_COMPAT='-O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fomit-frame-pointer -fcommon'
+
+run_make() {
+    if [ -n "${CC:-}" ]; then
+        make -C "$KDIR" ARCH=x86 \
+            CROSS_COMPILE="${CROSS_COMPILE:-}" \
+            CC="$CC" \
+            HOSTCFLAGS="$HOSTCFLAGS_COMPAT" \
+            "$@"
+    else
+        make -C "$KDIR" ARCH=x86 \
+            CROSS_COMPILE="${CROSS_COMPILE:-}" \
+            HOSTCFLAGS="$HOSTCFLAGS_COMPAT" \
+            "$@"
+    fi
+}
 
 echo "Preparing kernel tree: $KDIR"
-yes "" | make -C "$KDIR" $MAKE_ARGS oldconfig
-make -C "$KDIR" $MAKE_ARGS prepare
-make -C "$KDIR" $MAKE_ARGS modules_prepare
+yes "" | run_make oldconfig
+run_make prepare
+run_make modules_prepare
 
 echo "Kernel tree prepared."
