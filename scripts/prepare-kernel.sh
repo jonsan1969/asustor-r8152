@@ -24,7 +24,8 @@ fi
 
 cp "$CONFIG" "$KDIR/.config"
 
-MAKE_ARGS="ARCH=x86_64"
+# Linux uses ARCH=x86 for both i386 and x86_64 builds.
+MAKE_ARGS="ARCH=x86"
 if [ -n "${CROSS_COMPILE:-}" ]; then
     MAKE_ARGS="$MAKE_ARGS CROSS_COMPILE=$CROSS_COMPILE"
 fi
