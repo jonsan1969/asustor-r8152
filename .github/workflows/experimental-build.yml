@@ -1,0 +1,80 @@
+name: experimental-build
+
+on:
+  push:
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "sources.lock"
+      - ".github/workflows/experimental-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build-r8152:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install host build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc bison flex file libelf-dev
+
+      - name: Fetch ASUSTOR kernel source and config
+        run: ./scripts/fetch-asustor-kernel.sh
+
+      - name: Fetch ASUSTOR x86_64 toolchain
+        run: ./scripts/fetch-toolchain.sh
+
+      - name: Locate cross compiler
+        id: compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcc_path="$(find "$PWD/work/toolchain" -type f -name 'x86_64-asustor-linux-gnu-gcc' -perm -111 | head -n 1)"
+          if [[ -z "$gcc_path" ]]; then
+            echo "Compiler not found" >&2
+            exit 1
+          fi
+          prefix="${gcc_path%gcc}"
+          echo "gcc=$gcc_path" >> "$GITHUB_OUTPUT"
+          echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+          "$gcc_path" --version
+          file "$gcc_path"
+
+      - name: Prepare ASUSTOR kernel tree
+        env:
+          CROSS_COMPILE: ${{ steps.compiler.outputs.prefix }}
+        run: ./scripts/prepare-kernel.sh
+
+      - name: Inspect target kernel config
+        run: |
+          grep -E '^(CONFIG_64BIT|CONFIG_X86_64|CONFIG_SMP|CONFIG_MODULES|CONFIG_MODULE_UNLOAD|CONFIG_MODVERSIONS|CONFIG_LOCALVERSION)='             work/kernel-3.12.20/.config || true
+          make -s -C work/kernel-3.12.20 ARCH=x86 kernelrelease
+
+      - name: Build r8152
+        env:
+          CROSS_COMPILE: ${{ steps.compiler.outputs.prefix }}
+        run: ./scripts/build-module.sh
+
+      - name: Inspect module
+        run: |
+          file dist/r8152.ko
+          readelf -h dist/r8152.ko
+          echo "--- modinfo strings ---"
+          strings dist/r8152.ko | grep -E 'vermagic=|version=|v2\.13\.0|0bda|8156' || true
+          echo "--- unresolved symbols ---"
+          nm -u dist/r8152.ko | sort || true
+          echo "--- sha256 ---"
+          sha256sum dist/r8152.ko
+
+      - name: Upload test module
+        uses: actions/upload-artifact@v4
+        with:
+          name: as608t-r8152-test
+          path: |
+            dist/r8152.ko
+            scripts/test-module-on-nas.sh
+          if-no-files-found: error
