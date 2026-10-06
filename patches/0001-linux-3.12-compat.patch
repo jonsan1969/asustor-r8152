@@ -1,0 +1,61 @@
+From: asustor-r8152 project
+Subject: [PATCH] Backport r8152 v2.13.0 cleanly to Linux 3.12
+
+The Realtek v2.13.0 source contains two issues on kernels older than 3.18.4:
+- rtl_gso_check() is hidden behind the >= 3.18.4 guard even though the
+  < 3.18.4 transmit path calls it.
+- that same transmit path has a missing closing parenthesis.
+
+Linux 3.12 also predates dev_consume_skb_any().  On old kernels the closest
+equivalent is dev_kfree_skb_any(); the consume/drop accounting distinction
+did not exist there.
+
+The rtl_gso_check guard placement matches the later Realtek v2.14.0 source.
+---
+ compatibility.h | 4 ++++
+ r8152.c          | 4 ++--
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/compatibility.h b/compatibility.h
+--- a/compatibility.h
++++ b/compatibility.h
+@@ -49,6 +49,10 @@
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)
+ 	#define ether_addr_copy(dst, src)		memcpy(dst, src, ETH_ALEN)
++	/*
++	 * dev_consume_skb_any() was added after Linux 3.12.
++	 */
++	#define dev_consume_skb_any(skb)		dev_kfree_skb_any(skb)
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3,13,0)
+ 	#define BIT(nr)					(1UL << (nr))
+ 	#define BIT_ULL(nr)				(1ULL << (nr))
+diff --git a/r8152.c b/r8152.c
+--- a/r8152.c
++++ b/r8152.c
+@@ -2895,8 +2895,6 @@
+ 	netif_wake_queue(netdev);
+ }
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,4)
+-
+ static inline bool rtl_gso_check(struct net_device *dev, struct sk_buff *skb)
+ {
+ 	struct r8152 *tp = netdev_priv(dev);
+@@ -2910,6 +2908,8 @@
+ 		return false;
+ }
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,4)
++
+ static netdev_features_t
+ rtl8152_features_check(struct sk_buff *skb, struct net_device *dev,
+ 		       netdev_features_t features)
+@@ -2932,7 +2932,7 @@
+ 	struct r8152 *tp = netdev_priv(netdev);
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,4)
+-	if (unlikely(!rtl_gso_check(netdev, skb)) {
++	if (unlikely(!rtl_gso_check(netdev, skb))) {
+ 		netdev_features_t features = netdev->features;
+ 		struct sk_buff *segs, *nskb;
+ 
