@@ -34,7 +34,7 @@ Observed on the target NAS:
 - no `__crc_*` symbols observed in `/proc/kallsyms`
 - vendor modules appear heavily stripped; `modinfo` exposes only the filename
 
-The lack of visible `__crc_*` symbols strongly suggests that `CONFIG_MODVERSIONS` is not in use, which should make an external module easier to match to the running kernel. This still has to be proven by loading a test-built module.
+The published ASUSTOR x86_64 kernel config confirms `CONFIG_MODVERSIONS=y`. The absence of visible `__crc_*` symbols on the running NAS was therefore not sufficient to infer otherwise. A full build of the ASUSTOR 3.12.20 tree is required to generate `Module.symvers` before building the external module; the final proof remains a successful `insmod` on the target NAS.
 
 ## Driver baseline
 
@@ -70,14 +70,15 @@ The exact compiler identity of the running kernel is recorded above. Reproducing
 ## Milestones
 
 1. Reproduce the ASUSTOR 3.12.20 kernel build environment.
-2. Build `r8152.ko` from the v2.13.0 source.
-3. Load the module on AS-608T with no USB NIC attached.
-4. Confirm no `invalid module format` / `Unknown symbol` errors.
-5. Attach RTL8156BG hardware and confirm `0bda:8156` binding.
-6. Confirm a 2500 Mb/s link.
-7. Test with `iperf3`.
-8. Test SMB throughput against the 8-disk RAID6 array.
-9. Make loading persistent and, if worthwhile, wrap it as an ASUSTOR APKG.
+2. Build the full kernel tree to generate versioned symbol CRCs (`Module.symvers`).
+3. Build patched `r8152.ko` from the v2.13.0 source.
+4. Load the module on AS-608T with no USB NIC attached.
+5. Confirm no `invalid module format` / `Unknown symbol` errors.
+6. Attach RTL8156BG hardware and confirm `0bda:8156` binding.
+7. Confirm a 2500 Mb/s link.
+8. Test with `iperf3`.
+9. Test SMB throughput against the 8-disk RAID6 array.
+10. Make loading persistent and, if worthwhile, wrap it as an ASUSTOR APKG.
 
 ## Safety
 
